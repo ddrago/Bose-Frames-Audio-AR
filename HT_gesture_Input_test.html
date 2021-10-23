@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+
+    <script src="https://use.fontawesome.com/60bebdf15f.js"></script>
+
+</head>
+
+<body>
+    <!-- <i id="cursor" class="fas fa-mouse-pointer"  width="15" height="20" style="position: absolute;"></i> -->
+    <!-- <img " src="https://media.geeksforgeeks.org/wp-content/uploads/20200319212118/cursor2.png" width="15" height="20" style="position: absolute;">  -->
+    <p id="cursor" style="position: absolute;">ciao</p>
+
+
+    <button id="sensorDataButton">connect</button>
+
+    <span id="sensorDataSpan"></span>
+    <br>
+    <div id="sensorDataSelects">
+        <label>
+            Accelerometer <select data-sensor-id="0" disabled="">
+                <option selected="">0</option>
+                <option>20</option>
+                <option>40</option>
+                <option>80</option>
+                <option>160</option>
+                <option>320</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Gyroscope <select data-sensor-id="1" disabled="">
+                <option selected="">0</option>
+                <option>20</option>
+                <option>40</option>
+                <option>80</option>
+                <option>160</option>
+                <option>320</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Rotation <select data-sensor-id="2" disabled="">
+                <option selected="">0</option>
+                <option>20</option>
+                <option>40</option>
+                <option>80</option>
+                <option>160</option>
+                <option>320</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Game Rotation <select data-sensor-id="3" disabled="">
+                <option selected="">0</option>
+                <option>20</option>
+                <option>40</option>
+                <option>80</option>
+                <option>160</option>
+                <option>320</option>
+            </select>
+        </label>
+        <br>
+    
+        <div id="sensorDataOutput"></div>
+        <br>
+        <div id="sensorDataOutput2"></div>
+        <br>
+    </div>
+
+    <button id="gestureDataButton">connect</button>
+
+    <br>
+    <div id="gestureDataSelects">
+        <label>
+            Double Tap (129): <select data-gesture-id="129" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Head Nod (130): <select data-gesture-id="130" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Head Shake (131): <select data-gesture-id="131" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Gesture 192 <select data-gesture-id="192" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Gesture 193: <select data-gesture-id="193" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    
+        <label>
+            Gesture 194 <select data-gesture-id="194" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    </div>
+    <br>
+    <div id="gestureDataOutput"></div>
+    <div id="gestureDataOutput2"></div>
+    <br>
+
+</body>
+
+</html>
+ 
+<script type="module">
+    const BOSE_AR_SERVICE_UUID = "0000fdd2-0000-1000-8000-00805f9b34fb";
+    
+    const BOSE_AR_SENSOR_INFORMATION_CHARACTERISTIC_UUID = "855cb3e7-98ff-42a6-80fc-40b32a2221c1";
+    const BOSE_AR_SENSOR_CONFIGURATION_CHARACTERISTIC_UUID = "5af38af6-000e-404b-9b46-07f77580890b";
+    const BOSE_AR_SENSOR_DATA_CHARACTERISTIC_UUID = "56a72ab8-4988-4cc8-a752-fbd1d54a953d";
+    
+    const BOSE_AR_GESTURE_INFORMATION_CHARACTERISTIC_UUID = "a0384f52-f95a-4bcd-b898-7b9ceec92dad";
+    const BOSE_AR_GESTURE_CONFIGURATION_CHARACTERISTIC_UUID = "21e550af-f780-477b-9334-1f983296f1d7";
+    const BOSE_AR_GESTURE_DATA_CHARACTERISTIC_UUID = "9014dd4e-79ba-4802-a275-894d3b85ac74";
+ 
+    const sensorButton = document.getElementById('sensorDataButton');
+    const gestureButton = document.getElementById('gestureDataButton');
+    const connectionSpan = document.getElementById('sensorDataSpan');
+    const sensorSelectsContainer = document.getElementById('sensorDataSelects');
+    const sensorOutput = document.getElementById('sensorDataOutput');
+    const sensoroutput2 = document.getElementById('sensorDataOutput2');
+    const gestureSelectsContainer = document.getElementById('gestureDataSelects');
+    const gestureOutput = document.getElementById('gestureDataOutput');
+    const gestureOutput2 = document.getElementById('gestureDataOutput2');
+ 
+    const sensorInformationEntryLength= 12;
+    const sensorConfigurationEntryLength = 3;
+ 
+    const sensorSamplePeriods = [320, 160, 80, 40, 20];
+ 
+    const sensorNames = ['accelerometer', 'gyroscope', 'rotation', 'game rotation', 'orientation', 'magnetometer'];
+    const accuracyNames = ['unreliable', 'low', 'medium', 'high'];
+    const gestureNames = {
+        129 : 'double tap',
+        130 : 'head nod',
+        131 : 'head shake',
+ 
+        192 : 'unknown gesture 192',
+        193 : 'unknown gesture 193',
+        194 : 'unknown gesture 194',
+    };
+
+    var pitch = 0;
+    var yaw = 0;
+    var px, py;
+    px = py = 0;
+    var windowWidth = screen.width;
+    var windowHeight = screen.height;
+        
+    // Image of "cursor"
+    var cursor = document.getElementById("cursor"); 
+ 
+    sensorButton.addEventListener('click', event => {
+        output.innerText = '';
+ 
+        // request bluetooth device
+        navigator.bluetooth.requestDevice({
+            filters : [
+                {services : [BOSE_AR_SERVICE_UUID]}
+            ]
+        }).then(device => {
+            span.innerText = 'got device';
+            span.style.color = 'green';
+ 
+            // connect to device
+            return device.gatt.connect();
+        }).then(server => {
+            span.innerText = 'connected to device';
+            span.style.color = 'green';
+ 
+            // get service providing Bose AR-related characteristics
+            return server.getPrimaryService(BOSE_AR_SERVICE_UUID);
+        }).then(service => {
+            span.innerText = 'connected';
+            span.style.color = 'green';
+            
+            // get sensor information characteristic
+            service.getCharacteristic(BOSE_AR_SENSOR_INFORMATION_CHARACTERISTIC_UUID)
+                .then(sensorInformationCharacteristic => {
+                    sensorButton.disabled = true;
+                    
+                    span.innerText = 'got sensor information characteristic';
+                    span.style.color = 'green';
+ 
+                    sensorInformationCharacteristic.readValue()
+                        .then(dataView => {
+                            span.innerText = 'read sensor information characteristic';
+                            span.style.color = 'green';
+                            
+                            const sensorInformationEntries = [];
+                            let index = 0;
+ 
+                            while(index < dataView.buffer.byteLength) {
+                                const sensorId = dataView.getUint8(index);
+                                const sensorName = sensorNames[sensorId];                                            
+                                
+                                const minScaled = dataView.getInt16(index+1, false);
+                                const maxScaled = dataView.getInt16(index+3, false);
+ 
+                                const minRaw = dataView.getInt16(index+5, false);
+                                const maxRaw = dataView.getInt16(index+7, false);
+ 
+                                const scaleFactor = (maxScaled - minScaled)/(maxRaw - minRaw);
+ 
+                                const samplePeriodBitmask = dataView.getUint16(index+9, false);
+                                const availableSamplePeriods = sensorSamplePeriods.filter((sensorSamplePeriod, bitIndex) => (1 << bitIndex) & samplePeriodBitmask);
+ 
+                                const sampleLength = dataView.getUint8(index+11);
+ 
+                                const sensorInformationEntry = {
+                                    sensorId,
+ 
+                                    minScaled,
+                                    maxScaled,
+ 
+                                    minRaw,
+                                    maxRaw,
+ 
+                                    scaleFactor,
+ 
+                                    samplePeriodBitmask,
+                                    availableSamplePeriods,
+ 
+                                    sampleLength,
+                                    scale(value) {
+                                        return (((value - this.minRaw) * this.scaleFactor) + this.minScaled);
+                                    }
+                                };
+ 
+                                sensorInformationEntries.push(sensorInformationEntry);
+                                
+                                index += sensorInformationEntryLength;
+                            }
+ 
+                            service.getCharacteristic(BOSE_AR_SENSOR_CONFIGURATION_CHARACTERISTIC_UUID)
+                                .then(sensorConfigurationCharacteristic => {
+                                    span.innerText = 'got sensor configuration characteristic';
+                                    span.style.color = 'green';
+ 
+                                    function updateSelects(dataView) {
+                                        output.innerText = `sensor configuration raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}`;
+ 
+                                        let index = 0;
+                                        while(index < dataView.buffer.byteLength) {
+                                            const sensorId = dataView.getUint8(index);
+                                            const sensorName = sensorNames[sensorId];
+ 
+                                            const samplePeriod = dataView.getUint16(index+1, false);
+                                            
+                                            const select = selectsContainer.querySelector(`select[data-sensor-id="${sensorId}"]`);
+                                            select.value = samplePeriod
+ 
+                                            index += sensorConfigurationEntryLength;
+                                        }
+                                    }
+ 
+                                    sensorConfigurationCharacteristic.readValue()
+                                        .then(dataView => {
+                                            span.innerText = 'read sensor configuration characteristic';
+                                            span.style.color = 'green';
+ 
+                                            updateSelects(dataView);
+ 
+                                            sensorConfigurationCharacteristic.startNotifications();
+                                            sensorConfigurationCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                                                const dataView = sensorConfigurationCharacteristic.value;
+                                                updateSelects(dataView);
+                                            });
+ 
+                                            // NEW CODE
+                                            service.getCharacteristic(BOSE_AR_SENSOR_DATA_CHARACTERISTIC_UUID)
+                                                .then(sensorDataCharacteristic => {
+                                                    sensorButton.disabled = true;
+ 
+                                                    span.innerText = 'got sensor data characteristic';
+                                                    span.style.color = 'green';
+ 
+                                                    sensorDataCharacteristic.startNotifications();
+                                                    sensorDataCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                                                        const dataView = sensorDataCharacteristic.value;
+                                                        output2.innerText = `sensor data raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n\n`;
+                                                        
+                                                        let index = 0;
+                                                        const sensorDataEntries = [];
+ 
+                                                        output2.innerText += `parsing byte array\n`;
+                                                        while(index < dataView.buffer.byteLength) {
+                                                            output2.innerText += `parsing new sensor entry at index: ${index}\n`;
+ 
+                                                            const sensorId = dataView.getUint8(index);
+                                                            output2.innerText += `sensor id (Uint8 at index ${index}): ${sensorId}\n`;
+ 
+                                                            const sensorInformationEntry = sensorInformationEntries.find(sensorInformationEntry => sensorInformationEntry.sensorId == sensorId);
+ 
+                                                            const sensorName = sensorNames[sensorId];
+                                                            output2.innerText += `sensor name: "${sensorName}"\n`;
+ 
+                                                            const timestamp = dataView.getUint16(index+1, false);
+                                                            output2.innerText += `timestamp (big-endian Uint16 at index ${index+1}): ${timestamp}\n`;
+ 
+                                                            let vector, quaternion;
+                                                            let accuracy, accuracyName;
+                                                            
+                                                            switch(sensorName) {
+                                                                case 'accelerometer':
+                                                                case 'gyroscope':
+                                                                    vector = {
+                                                                        x : sensorInformationEntry.scale(dataView.getInt16(index+3, false)),
+                                                                        y : sensorInformationEntry.scale(dataView.getInt16(index+5, false)),
+                                                                        z : sensorInformationEntry.scale(dataView.getInt16(index+7, false)),
+                                                                    };
+ 
+                                                                    output2.innerText += `vector x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
+                                                                    output2.innerText += `vector y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
+                                                                    output2.innerText += `vector z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
+ 
+                                                                    output2.innerText += `vector x (scaled): ${vector.x}\n`;
+                                                                    output2.innerText += `vector y (scaled): ${vector.y}\n`;
+                                                                    output2.innerText += `vector z (scaled): ${vector.z}\n`;
+ 
+                                                                    accuracy = dataView.getUint8(index+9);
+                                                                    output2.innerText += `accuracy (Uint8 at index ${index+9}): ${accuracy}\n`;
+ 
+                                                                    accuracyName = accuracyNames[accuracy];
+                                                                    output2.innerText += `accuracy name: ${accuracyName}`;
+                                                                    break;
+                                                                case 'rotation':
+                                                                    // we're parsing the accuracy here (unique to rotation only) so we can reuse the quaternion parsing below for both rotation and game roation
+                                                                    accuracy = dataView.getInt16(index+11, false);
+                                                                    output2.innerText += `accuracy (big-endian Uint16 at index ${index+11}): ${accuracy}\n`;
+                                                                case 'game rotation':
+                                                                    quaternion = {
+                                                                        x : sensorInformationEntry.scale(dataView.getInt16(index+3, false)),
+                                                                        y : sensorInformationEntry.scale(dataView.getInt16(index+5, false)),
+                                                                        z : sensorInformationEntry.scale(dataView.getInt16(index+7, false)),
+                                                                        w : sensorInformationEntry.scale(dataView.getInt16(index+9, false)),
+                                                                    };
+ 
+                                                                    output2.innerText += `quaternion x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
+                                                                    output2.innerText += `quaternion y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
+                                                                    output2.innerText += `quaternion z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
+                                                                    output2.innerText += `quaternion w (big-endian Uint16 at index ${index+9}): ${dataView.getInt16(index+9, false)}\n`;
+ 
+                                                                    output2.innerText += `quaternion x (scaled): ${quaternion.x}\n`;
+                                                                    output2.innerText += `quaternion y (scaled): ${quaternion.y}\n`;
+                                                                    output2.innerText += `quaternion z (scaled): ${quaternion.z}\n`;
+                                                                    output2.innerText += `quaternion w (scaled): ${quaternion.w}\n`;
+                                                                    break;
+                                                                default:
+                                                                    break;
+                                                            }
+ 
+                                                            // calculate yaw/pitch/roll from quaternion (for rotation and game rotation)
+                                                            if(quaternion) {
+                                                                const {x, y, z, w} = quaternion;
+ 
+                                                                yaw = -Math.atan2(2*(w*z+x*y), 1-2*(y*y+z*z));
+                                                                output2.innerText += `yaw: ${yaw}\n`;
+                                                                
+                                                                pitch = Math.atan2(2*(w*x+y*z), 1-2*(x*x+y*y)) + Math.PI;
+                                                                pitch = (pitch > Math.PI)?
+                                                                    pitch - 2*Math.PI:
+                                                                    pitch;
+ 
+                                                                output2.innerText += `pitch: ${pitch}\n`;
+                                                                
+                                                                let roll = 2*(w*y-z*x);
+                                                                roll = (Math.abs(roll) >= 1)?
+                                                                    -(Math.sign(roll) * Math.PI/2):
+                                                                    -Math.asin(roll);
+ 
+                                                                output2.innerText += `roll: ${roll}\n`;
+                                                                
+                                                                Object.assign(quaternion, {yaw, pitch, roll});
+
+                                                                let leftViewAngle = 1.25
+                                                                let rightViewAngle = 1.78
+
+                                                                //TODO: sets the image cursor to new relative position
+                                                                let gazeX = (yaw + leftViewAngle)*(windowWidth/(rightViewAngle - leftViewAngle));
+                                                                let gazeY = pitch;
+                                                                cursor.style.left = gazeX + "px";
+                                                                cursor.style.top = (py + pitch + 100) + "px";
+
+                                                                if(gazeX<windowWidth/2){
+                                                                    cursor.style.color = 'red'
+
+                                                                } else {
+                                                                    cursor.style.color = 'green'
+                                                                }
+                                                                
+                                                                output2.innerText += `gaze x: ${gazeX}\n`;
+                                                                output2.innerText += `gaze y: ${gazeY}\n`;
+                                                            }
+ 
+                                                            const sensorDataEntry = {
+                                                                sensorId, sensorName,
+ 
+                                                                timestamp,
+ 
+                                                                vector, quaternion,
+                                                                accuracy, accuracyName,
+                                                            };
+                                                            
+                                                            sensorDataEntries.push(sensorDataEntry);
+                                                            
+                                                            index += 3 + sensorInformationEntry.sampleLength;
+ 
+                                                            output2.innerText += `\n\n`;
+                                                        }
+                                                    });
+                                                }).catch(error => {
+                                                    console.error(error);
+ 
+                                                    span.innerText = 'unable to get sensor data characteristic';
+                                                    span.style.color = 'red';
+                                                });
+ 
+                                        }).catch(error => {
+                                            span.innerText = 'unable to read sensor configuration characteristic';
+                                            span.style.color = 'red';
+                                        });
+ 
+                                    selectsContainer.querySelectorAll('select').forEach(select => {
+                                        select.disabled = false;
+ 
+                                        select.addEventListener('input', event => {
+                                            const sensorId = Number(select.dataset.sensorId);
+                                            const samplePeriod = Number(select.value);
+ 
+                                            const dataView = sensorConfigurationCharacteristic.value;
+                                            const index = sensorId * sensorConfigurationEntryLength;
+                                            dataView.setUint16(index+1, samplePeriod, false);
+ 
+                                            sensorConfigurationCharacteristic.writeValue(dataView);
+                                        });
+                                    });
+ 
+                                }).catch(error => {
+                                    console.error(error);
+ 
+                                    span.innerText = 'unable to get sensor configuration characteristic';
+                                    span.style.color = 'red';
+                                });
+ 
+                        }).catch(error => {
+                            console.error(error);
+ 
+                            span.innerText = 'unable to read sensor information characteristic';
+                            span.style.color = 'red';
+                        });
+ 
+                }).catch(error => {
+                    span.innerText = 'failed to get sensor information characteristic';
+                    span.style.color = 'red';
+                });
+ 
+        }).catch(error => {
+            console.error(error);
+ 
+            span.innerText = 'connection failed';
+            span.style.color = 'red';
+        });
+    });
+
+    gestureButton.addEventListener('click', event => {
+        output.innerText = '';
+        output2.innerText = '';
+ 
+        // request bluetooth device
+        navigator.bluetooth.requestDevice({
+            filters : [
+                {services : [BOSE_AR_SERVICE_UUID]}
+            ]
+        }).then(device => {
+            span.innerText = 'got device';
+            span.style.color = 'green';
+ 
+            // connect to device
+            return device.gatt.connect();
+        }).then(server => {
+            span.innerText = 'connected to device';
+            span.style.color = 'green';
+ 
+            // get service providing Bose AR-related characteristics
+            return server.getPrimaryService(BOSE_AR_SERVICE_UUID);
+        }).then(service => {
+            span.innerText = 'connected';
+            span.style.color = 'green';
+ 
+            // get gesture information characteristic
+            service.getCharacteristic(BOSE_AR_GESTURE_INFORMATION_CHARACTERISTIC_UUID)
+                .then(gestureInformationCharacteristic => {
+                    span.innerText = 'got gesture information characteristic';
+                    span.style.color = 'green';
+ 
+                    // read gesture information characteristic value
+                    gestureInformationCharacteristic.readValue()
+                        .then(dataView => {
+                            const buffer = Array.from(new Uint8Array(dataView.buffer));
+ 
+                            output.innerText += `gesture information raw byte array: ${JSON.stringify(buffer)}\n\n`;
+ 
+                            gestureButton.disabled = true;
+ 
+                            span.innerText = 'gesture information characteristic read';
+                            span.style.color = 'green';
+ 
+                            let index = 0;
+                            const gestureInformationEntries = [];
+ 
+                            output.innerText += 'parsing byte array...\n\n'
+                            while(index + length < dataView.byteLength) {
+                                output.innerText += `parsing new gesture at index: ${index}\n`;
+ 
+                                const gestureId = dataView.getUint8(index);
+                                output.innerText += `gesture id (parsed as a Uint8 starting at index ${index}): ${gestureId}\n`;
+                                
+                                const gestureName = gestureNames[gestureId];
+                                output.innerText += `gesture name (indexed by gesture id): "${gestureName}"\n`;
+ 
+                                const configurationPayloadLength = dataView.getUint16(index+1, true);
+                                output.innerText += `configuration payload length (parsed as little-endian Uint16 starting at index ${index+1}): ${configurationPayloadLength}\n`;
+                                
+                                const gestureInformationEntry = {
+                                    gestureId,
+                                    gestureName,
+                                    configurationPayloadLength,
+                                };
+ 
+                                output.innerText += `\n`;
+                                gestureInformationEntries.push(gestureInformationEntry);
+                                
+                                index += gestureInformationEntryLength;
+                            }
+ 
+                            // get gesture configuration characteristic
+                            service.getCharacteristic(BOSE_AR_GESTURE_CONFIGURATION_CHARACTERISTIC_UUID)
+                                .then(gestureConfigurationCharacteristic => {
+                                    span.innerText = 'got gesture configuration characteristic';
+                                    span.style.color = 'green';
+    
+                                    // set initial state of selects
+                                    function updateSelects(dataView) {
+                                        const byteArray = Array.from(new Uint8Array(dataView.buffer));
+                                        output.innerText = `gesture configuration raw byte array: ${JSON.stringify(byteArray)}`;
+    
+                                        let index = 0;
+                                        while(index < byteArray.length) {
+                                            const gestureId = byteArray[index];
+                                            const enabled = byteArray[index+1] == 1;
+    
+                                            const select = selectsContainer.querySelector(`select[data-gesture-id="${gestureId}"]`);
+                                            select.value = enabled? 'enabled':'disabled';
+ 
+                                            const gestureInformationEntry = gestureInformationEntries.find(gestureInformationEntry => gestureInformationEntry.gestureId == gestureId);
+    
+                                            index += 1 + gestureInformationEntry;
+                                        }
+                                    }
+    
+                                    // read gesture configuration characteristic value
+                                    gestureConfigurationCharacteristic.readValue()
+                                        .then(dataView => {
+                                            gestureButton.disabled = true;
+    
+                                            span.innerText = 'gesture configuration characteristic read';
+                                            span.style.color = 'green';
+    
+                                            updateSelects(dataView);
+    
+                                            // listen for gesture configuration characteristic updates
+                                            gestureConfigurationCharacteristic.startNotifications();
+                                            gestureConfigurationCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                                                const dataView = gestureConfigurationCharacteristic.value;
+                                                updateSelects(dataView);
+                                            });
+ 
+                                            // NEW CODE
+ 
+                                            // get gesture data characteristic
+                                            service.getCharacteristic(BOSE_AR_GESTURE_DATA_CHARACTERISTIC_UUID)
+                                                .then(gestureDataCharacteristic => {
+                                                    span.innerText = 'got gesture data characteristic';
+                                                    span.style.color = 'green';
+ 
+                                                    gestureDataCharacteristic.startNotifications();
+                                                    gestureDataCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                                                        output2.innerText += `\nGesture Detected\n`;
+                                                        
+                                                        const dataView = gestureDataCharacteristic.value;
+                                                        output2.innerText += `raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n`;
+                                                        
+                                                        const gestureId = dataView.getUint8(0);
+                                                        output2.innerText += `gesture id (first Uint8 byte): ${gestureId}\n`;
+                                                        
+                                                        const gestureName = gestureNames[gestureId];
+                                                        output2.innerText += `gesture name: "${gestureName}"\n`;                                                    
+                                                        
+                                                        const timestamp = dataView.getUint16(1, false);
+                                                        output2.innerText += `timestamp (big-endian Uint16 from last 2 bytes): ${timestamp} ms\n`;
+                                                    });
+ 
+                                                }).catch(error => {
+                                                    console.error(error);
+ 
+                                                    span.innerText = 'unable to connect to get gesture data characteristic';
+                                                    span.style.color = 'red';
+                                                });
+ 
+                                        }).catch(error => {
+                                            console.error(error);
+    
+                                            span.innerText = 'unable to connect to gesture configuration characteristic';
+                                            span.style.color = 'red';
+                                        });
+                                    
+                                    // add eventlisteners to selects to enable/disable gestures
+                                    selectsContainer.querySelectorAll('select').forEach(select => {
+                                        select.disabled = false;
+    
+                                        select.addEventListener('input', event => {
+                                            const gestureId = Number(select.dataset.gestureId);
+                                            const enabled = event.target.value == 'enabled';
+                                            
+                                            const dataView = gestureConfigurationCharacteristic.value;
+                                            let byteArray = Array.from(new Uint8Array(dataView.buffer));
+                                            byteArray[byteArray.indexOf(gestureId)+1] = enabled? 1:0;
+    
+                                            byteArray = new Uint8Array(byteArray);
+                                            gestureConfigurationCharacteristic.writeValue(byteArray);
+                                        });
+                                    });
+    
+                                }).catch(error => {
+                                    console.error(error);
+    
+                                    span.innerText = 'unable get gesture configuration characteristic';
+                                    span.style.color = 'red';
+                                });
+                        }).catch(error => {
+                            console.error(error);
+ 
+                            span.innerText = 'unable to get gesture information characteristic';
+                            span.style.color = 'red';
+                        });
+                }).catch(error => {
+                    console.error(error);
+ 
+                    span.innerText = 'unable to get gesture information characteristic';
+                    span.style.color = 'red';
+                });
+ 
+        }).catch(error => {
+            console.error(error);
+ 
+            span.innerText = 'connection failed';
+            span.style.color = 'red';
+        });
+    });
+</script>
