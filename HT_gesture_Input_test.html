@@ -180,6 +180,8 @@
     px = py = 0;
     var windowWidth = screen.width;
     var windowHeight = screen.height;
+    var gazeX = 0;
+    var gazeY = 0;
  
     sensorButton.addEventListener('click', event => {
         sensorOutput.innerText = '';
@@ -316,18 +318,18 @@
  
                                                         sensorOutput2.innerText += `parsing byte array\n`;
                                                         while(index < dataView.buffer.byteLength) {
-                                                            sensorOutput2.innerText += `parsing new sensor entry at index: ${index}\n`;
+                                                            // sensorOutput2.innerText += `parsing new sensor entry at index: ${index}\n`;
  
                                                             const sensorId = dataView.getUint8(index);
-                                                            sensorOutput2.innerText += `sensor id (Uint8 at index ${index}): ${sensorId}\n`;
+                                                            // sensorOutput2.innerText += `sensor id (Uint8 at index ${index}): ${sensorId}\n`;
  
                                                             const sensorInformationEntry = sensorInformationEntries.find(sensorInformationEntry => sensorInformationEntry.sensorId == sensorId);
  
                                                             const sensorName = sensorNames[sensorId];
-                                                            sensorOutput2.innerText += `sensor name: "${sensorName}"\n`;
+                                                            // sensorOutput2.innerText += `sensor name: "${sensorName}"\n`;
  
                                                             const timestamp = dataView.getUint16(index+1, false);
-                                                            sensorOutput2.innerText += `timestamp (big-endian Uint16 at index ${index+1}): ${timestamp}\n`;
+                                                            // sensorOutput2.innerText += `timestamp (big-endian Uint16 at index ${index+1}): ${timestamp}\n`;
  
                                                             let vector, quaternion;
                                                             let accuracy, accuracyName;
@@ -341,13 +343,13 @@
                                                                         z : sensorInformationEntry.scale(dataView.getInt16(index+7, false)),
                                                                     };
  
-                                                                    sensorOutput2.innerText += `vector x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
-                                                                    sensorOutput2.innerText += `vector y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
-                                                                    sensorOutput2.innerText += `vector z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
+                                                                    // sensorOutput2.innerText += `vector x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
+                                                                    // sensorOutput2.innerText += `vector y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
+                                                                    // sensorOutput2.innerText += `vector z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
  
-                                                                    sensorOutput2.innerText += `vector x (scaled): ${vector.x}\n`;
-                                                                    sensorOutput2.innerText += `vector y (scaled): ${vector.y}\n`;
-                                                                    sensorOutput2.innerText += `vector z (scaled): ${vector.z}\n`;
+                                                                    // sensorOutput2.innerText += `vector x (scaled): ${vector.x}\n`;
+                                                                    // sensorOutput2.innerText += `vector y (scaled): ${vector.y}\n`;
+                                                                    // sensorOutput2.innerText += `vector z (scaled): ${vector.z}\n`;
  
                                                                     accuracy = dataView.getUint8(index+9);
                                                                     sensorOutput2.innerText += `accuracy (Uint8 at index ${index+9}): ${accuracy}\n`;
@@ -367,15 +369,15 @@
                                                                         w : sensorInformationEntry.scale(dataView.getInt16(index+9, false)),
                                                                     };
  
-                                                                    sensorOutput2.innerText += `quaternion x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
-                                                                    sensorOutput2.innerText += `quaternion y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
-                                                                    sensorOutput2.innerText += `quaternion z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
-                                                                    sensorOutput2.innerText += `quaternion w (big-endian Uint16 at index ${index+9}): ${dataView.getInt16(index+9, false)}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion w (big-endian Uint16 at index ${index+9}): ${dataView.getInt16(index+9, false)}\n`;
  
-                                                                    sensorOutput2.innerText += `quaternion x (scaled): ${quaternion.x}\n`;
-                                                                    sensorOutput2.innerText += `quaternion y (scaled): ${quaternion.y}\n`;
-                                                                    sensorOutput2.innerText += `quaternion z (scaled): ${quaternion.z}\n`;
-                                                                    sensorOutput2.innerText += `quaternion w (scaled): ${quaternion.w}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion x (scaled): ${quaternion.x}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion y (scaled): ${quaternion.y}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion z (scaled): ${quaternion.z}\n`;
+                                                                    // sensorOutput2.innerText += `quaternion w (scaled): ${quaternion.w}\n`;
                                                                     break;
                                                                 default:
                                                                     break;
@@ -408,8 +410,8 @@
                                                                 let rightViewAngle = 1.78
 
                                                                 //TODO: sets the image cursor to new relative position
-                                                                let gazeX = (yaw + leftViewAngle)*(windowWidth/(rightViewAngle - leftViewAngle));
-                                                                let gazeY = pitch;
+                                                                gazeX = (yaw + leftViewAngle)*(windowWidth/(rightViewAngle - leftViewAngle));
+                                                                gazeY = pitch;
                                                                 cursor.style.left = gazeX + "px";
                                                                 cursor.style.top = (py + pitch + 100) + "px";
 
@@ -530,7 +532,7 @@
                         .then(dataView => {
                             const buffer = Array.from(new Uint8Array(dataView.buffer));
  
-                            gestureOutput.innerText += `gesture information raw byte array: ${JSON.stringify(buffer)}\n\n`;
+                            // gestureOutput.innerText += `gesture information raw byte array: ${JSON.stringify(buffer)}\n\n`;
  
                             gestureButton.disabled = true;
  
@@ -540,7 +542,7 @@
                             let index = 0;
                             const gestureInformationEntries = [];
  
-                            gestureOutput.innerText += 'parsing byte array...\n\n'
+                            // gestureOutput.innerText += 'parsing byte array...\n\n'
                             while(index + length < dataView.byteLength) {
                                 gestureOutput.innerText += `parsing new gesture at index: ${index}\n`;
  
@@ -617,19 +619,29 @@
  
                                                     gestureDataCharacteristic.startNotifications();
                                                     gestureDataCharacteristic.addEventListener('characteristicvaluechanged', event => {
-                                                        gestureOutput2.innerText += `\nGesture Detected\n`;
+
+                                                        // gestureOutput2.innerText += `\nGesture Detected\n`;
                                                         
                                                         const dataView = gestureDataCharacteristic.value;
-                                                        gestureOutput2.innerText += `raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n`;
+                                                        // gestureOutput2.innerText += `raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n`;
                                                         
                                                         const gestureId = dataView.getUint8(0);
-                                                        gestureOutput2.innerText += `gesture id (first Uint8 byte): ${gestureId}\n`;
+                                                        // gestureOutput2.innerText += `gesture id (first Uint8 byte): ${gestureId}\n`;
                                                         
                                                         const gestureName = gestureNames[gestureId];
-                                                        gestureOutput2.innerText += `gesture name: "${gestureName}"\n`;                                                    
+                                                        // gestureOutput2.innerText += `gesture name: "${gestureName}"\n`;                                                    
                                                         
-                                                        const timestamp = dataView.getUint16(1, false);
-                                                        gestureOutput2.innerText += `timestamp (big-endian Uint16 from last 2 bytes): ${timestamp} ms\n`;
+                                                        // const timestamp = dataView.getUint16(1, false);
+                                                        // gestureOutput2.innerText += `timestamp (big-endian Uint16 from last 2 bytes): ${timestamp} ms\n`;
+
+                                                        if (gestureName == 'double tap'){
+                                                            if(gazeX<windowWidth/2){
+                                                                    cursor.innerText += " bella!";
+
+                                                                } else {
+                                                                    cursor.innerText += " bellissima!";
+                                                                }
+                                                        }
                                                     });
  
                                                 }).catch(error => {
