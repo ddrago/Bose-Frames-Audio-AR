@@ -150,13 +150,15 @@
     const connectionSpan = document.getElementById('sensorDataSpan');
     const sensorSelectsContainer = document.getElementById('sensorDataSelects');
     const sensorOutput = document.getElementById('sensorDataOutput');
-    const sensoroutput2 = document.getElementById('sensorDataOutput2');
+    const sensorOutput2 = document.getElementById('sensorDataOutput2');
     const gestureSelectsContainer = document.getElementById('gestureDataSelects');
     const gestureOutput = document.getElementById('gestureDataOutput');
     const gestureOutput2 = document.getElementById('gestureDataOutput2');
+    const cursor = document.getElementById("cursor"); 
  
     const sensorInformationEntryLength= 12;
     const sensorConfigurationEntryLength = 3;
+    const gestureInformationEntryLength = 3;
  
     const sensorSamplePeriods = [320, 160, 80, 40, 20];
  
@@ -178,12 +180,9 @@
     px = py = 0;
     var windowWidth = screen.width;
     var windowHeight = screen.height;
-        
-    // Image of "cursor"
-    var cursor = document.getElementById("cursor"); 
  
     sensorButton.addEventListener('click', event => {
-        output.innerText = '';
+        sensorOutput.innerText = '';
  
         // request bluetooth device
         navigator.bluetooth.requestDevice({
@@ -191,33 +190,33 @@
                 {services : [BOSE_AR_SERVICE_UUID]}
             ]
         }).then(device => {
-            span.innerText = 'got device';
-            span.style.color = 'green';
+            connectionSpan.innerText = 'got device';
+            connectionSpan.style.color = 'green';
  
             // connect to device
             return device.gatt.connect();
         }).then(server => {
-            span.innerText = 'connected to device';
-            span.style.color = 'green';
+            connectionSpan.innerText = 'connected to device';
+            connectionSpan.style.color = 'green';
  
             // get service providing Bose AR-related characteristics
             return server.getPrimaryService(BOSE_AR_SERVICE_UUID);
         }).then(service => {
-            span.innerText = 'connected';
-            span.style.color = 'green';
+            connectionSpan.innerText = 'connected';
+            connectionSpan.style.color = 'green';
             
             // get sensor information characteristic
             service.getCharacteristic(BOSE_AR_SENSOR_INFORMATION_CHARACTERISTIC_UUID)
                 .then(sensorInformationCharacteristic => {
                     sensorButton.disabled = true;
                     
-                    span.innerText = 'got sensor information characteristic';
-                    span.style.color = 'green';
+                    connectionSpan.innerText = 'got sensor information characteristic';
+                    connectionSpan.style.color = 'green';
  
                     sensorInformationCharacteristic.readValue()
                         .then(dataView => {
-                            span.innerText = 'read sensor information characteristic';
-                            span.style.color = 'green';
+                            connectionSpan.innerText = 'read sensor information characteristic';
+                            connectionSpan.style.color = 'green';
                             
                             const sensorInformationEntries = [];
                             let index = 0;
@@ -266,11 +265,11 @@
  
                             service.getCharacteristic(BOSE_AR_SENSOR_CONFIGURATION_CHARACTERISTIC_UUID)
                                 .then(sensorConfigurationCharacteristic => {
-                                    span.innerText = 'got sensor configuration characteristic';
-                                    span.style.color = 'green';
+                                    connectionSpan.innerText = 'got sensor configuration characteristic';
+                                    connectionSpan.style.color = 'green';
  
                                     function updateSelects(dataView) {
-                                        output.innerText = `sensor configuration raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}`;
+                                        sensorOutput.innerText = `sensor configuration raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}`;
  
                                         let index = 0;
                                         while(index < dataView.buffer.byteLength) {
@@ -279,7 +278,7 @@
  
                                             const samplePeriod = dataView.getUint16(index+1, false);
                                             
-                                            const select = selectsContainer.querySelector(`select[data-sensor-id="${sensorId}"]`);
+                                            const select = sensorSelectsContainer.querySelector(`select[data-sensor-id="${sensorId}"]`);
                                             select.value = samplePeriod
  
                                             index += sensorConfigurationEntryLength;
@@ -288,8 +287,8 @@
  
                                     sensorConfigurationCharacteristic.readValue()
                                         .then(dataView => {
-                                            span.innerText = 'read sensor configuration characteristic';
-                                            span.style.color = 'green';
+                                            connectionSpan.innerText = 'read sensor configuration characteristic';
+                                            connectionSpan.style.color = 'green';
  
                                             updateSelects(dataView);
  
@@ -304,31 +303,31 @@
                                                 .then(sensorDataCharacteristic => {
                                                     sensorButton.disabled = true;
  
-                                                    span.innerText = 'got sensor data characteristic';
-                                                    span.style.color = 'green';
+                                                    connectionSpan.innerText = 'got sensor data characteristic';
+                                                    connectionSpan.style.color = 'green';
  
                                                     sensorDataCharacteristic.startNotifications();
                                                     sensorDataCharacteristic.addEventListener('characteristicvaluechanged', event => {
                                                         const dataView = sensorDataCharacteristic.value;
-                                                        output2.innerText = `sensor data raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n\n`;
+                                                        sensorOutput2.innerText = `sensor data raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n\n`;
                                                         
                                                         let index = 0;
                                                         const sensorDataEntries = [];
  
-                                                        output2.innerText += `parsing byte array\n`;
+                                                        sensorOutput2.innerText += `parsing byte array\n`;
                                                         while(index < dataView.buffer.byteLength) {
-                                                            output2.innerText += `parsing new sensor entry at index: ${index}\n`;
+                                                            sensorOutput2.innerText += `parsing new sensor entry at index: ${index}\n`;
  
                                                             const sensorId = dataView.getUint8(index);
-                                                            output2.innerText += `sensor id (Uint8 at index ${index}): ${sensorId}\n`;
+                                                            sensorOutput2.innerText += `sensor id (Uint8 at index ${index}): ${sensorId}\n`;
  
                                                             const sensorInformationEntry = sensorInformationEntries.find(sensorInformationEntry => sensorInformationEntry.sensorId == sensorId);
  
                                                             const sensorName = sensorNames[sensorId];
-                                                            output2.innerText += `sensor name: "${sensorName}"\n`;
+                                                            sensorOutput2.innerText += `sensor name: "${sensorName}"\n`;
  
                                                             const timestamp = dataView.getUint16(index+1, false);
-                                                            output2.innerText += `timestamp (big-endian Uint16 at index ${index+1}): ${timestamp}\n`;
+                                                            sensorOutput2.innerText += `timestamp (big-endian Uint16 at index ${index+1}): ${timestamp}\n`;
  
                                                             let vector, quaternion;
                                                             let accuracy, accuracyName;
@@ -342,24 +341,24 @@
                                                                         z : sensorInformationEntry.scale(dataView.getInt16(index+7, false)),
                                                                     };
  
-                                                                    output2.innerText += `vector x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
-                                                                    output2.innerText += `vector y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
-                                                                    output2.innerText += `vector z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
+                                                                    sensorOutput2.innerText += `vector x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
+                                                                    sensorOutput2.innerText += `vector y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
+                                                                    sensorOutput2.innerText += `vector z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
  
-                                                                    output2.innerText += `vector x (scaled): ${vector.x}\n`;
-                                                                    output2.innerText += `vector y (scaled): ${vector.y}\n`;
-                                                                    output2.innerText += `vector z (scaled): ${vector.z}\n`;
+                                                                    sensorOutput2.innerText += `vector x (scaled): ${vector.x}\n`;
+                                                                    sensorOutput2.innerText += `vector y (scaled): ${vector.y}\n`;
+                                                                    sensorOutput2.innerText += `vector z (scaled): ${vector.z}\n`;
  
                                                                     accuracy = dataView.getUint8(index+9);
-                                                                    output2.innerText += `accuracy (Uint8 at index ${index+9}): ${accuracy}\n`;
+                                                                    sensorOutput2.innerText += `accuracy (Uint8 at index ${index+9}): ${accuracy}\n`;
  
                                                                     accuracyName = accuracyNames[accuracy];
-                                                                    output2.innerText += `accuracy name: ${accuracyName}`;
+                                                                    sensorOutput2.innerText += `accuracy name: ${accuracyName}`;
                                                                     break;
                                                                 case 'rotation':
                                                                     // we're parsing the accuracy here (unique to rotation only) so we can reuse the quaternion parsing below for both rotation and game roation
                                                                     accuracy = dataView.getInt16(index+11, false);
-                                                                    output2.innerText += `accuracy (big-endian Uint16 at index ${index+11}): ${accuracy}\n`;
+                                                                    sensorOutput2.innerText += `accuracy (big-endian Uint16 at index ${index+11}): ${accuracy}\n`;
                                                                 case 'game rotation':
                                                                     quaternion = {
                                                                         x : sensorInformationEntry.scale(dataView.getInt16(index+3, false)),
@@ -368,15 +367,15 @@
                                                                         w : sensorInformationEntry.scale(dataView.getInt16(index+9, false)),
                                                                     };
  
-                                                                    output2.innerText += `quaternion x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
-                                                                    output2.innerText += `quaternion y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
-                                                                    output2.innerText += `quaternion z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
-                                                                    output2.innerText += `quaternion w (big-endian Uint16 at index ${index+9}): ${dataView.getInt16(index+9, false)}\n`;
+                                                                    sensorOutput2.innerText += `quaternion x (big-endian Uint16 at index ${index+3}): ${dataView.getInt16(index+3, false)}\n`;
+                                                                    sensorOutput2.innerText += `quaternion y (big-endian Uint16 at index ${index+5}): ${dataView.getInt16(index+5, false)}\n`;
+                                                                    sensorOutput2.innerText += `quaternion z (big-endian Uint16 at index ${index+7}): ${dataView.getInt16(index+7, false)}\n`;
+                                                                    sensorOutput2.innerText += `quaternion w (big-endian Uint16 at index ${index+9}): ${dataView.getInt16(index+9, false)}\n`;
  
-                                                                    output2.innerText += `quaternion x (scaled): ${quaternion.x}\n`;
-                                                                    output2.innerText += `quaternion y (scaled): ${quaternion.y}\n`;
-                                                                    output2.innerText += `quaternion z (scaled): ${quaternion.z}\n`;
-                                                                    output2.innerText += `quaternion w (scaled): ${quaternion.w}\n`;
+                                                                    sensorOutput2.innerText += `quaternion x (scaled): ${quaternion.x}\n`;
+                                                                    sensorOutput2.innerText += `quaternion y (scaled): ${quaternion.y}\n`;
+                                                                    sensorOutput2.innerText += `quaternion z (scaled): ${quaternion.z}\n`;
+                                                                    sensorOutput2.innerText += `quaternion w (scaled): ${quaternion.w}\n`;
                                                                     break;
                                                                 default:
                                                                     break;
@@ -387,21 +386,21 @@
                                                                 const {x, y, z, w} = quaternion;
  
                                                                 yaw = -Math.atan2(2*(w*z+x*y), 1-2*(y*y+z*z));
-                                                                output2.innerText += `yaw: ${yaw}\n`;
+                                                                sensorOutput2.innerText += `yaw: ${yaw}\n`;
                                                                 
                                                                 pitch = Math.atan2(2*(w*x+y*z), 1-2*(x*x+y*y)) + Math.PI;
                                                                 pitch = (pitch > Math.PI)?
                                                                     pitch - 2*Math.PI:
                                                                     pitch;
  
-                                                                output2.innerText += `pitch: ${pitch}\n`;
+                                                                sensorOutput2.innerText += `pitch: ${pitch}\n`;
                                                                 
                                                                 let roll = 2*(w*y-z*x);
                                                                 roll = (Math.abs(roll) >= 1)?
                                                                     -(Math.sign(roll) * Math.PI/2):
                                                                     -Math.asin(roll);
  
-                                                                output2.innerText += `roll: ${roll}\n`;
+                                                                sensorOutput2.innerText += `roll: ${roll}\n`;
                                                                 
                                                                 Object.assign(quaternion, {yaw, pitch, roll});
 
@@ -421,8 +420,8 @@
                                                                     cursor.style.color = 'green'
                                                                 }
                                                                 
-                                                                output2.innerText += `gaze x: ${gazeX}\n`;
-                                                                output2.innerText += `gaze y: ${gazeY}\n`;
+                                                                sensorOutput2.innerText += `gaze x: ${gazeX}\n`;
+                                                                sensorOutput2.innerText += `gaze y: ${gazeY}\n`;
                                                             }
  
                                                             const sensorDataEntry = {
@@ -438,22 +437,22 @@
                                                             
                                                             index += 3 + sensorInformationEntry.sampleLength;
  
-                                                            output2.innerText += `\n\n`;
+                                                            sensorOutput2.innerText += `\n\n`;
                                                         }
                                                     });
                                                 }).catch(error => {
                                                     console.error(error);
  
-                                                    span.innerText = 'unable to get sensor data characteristic';
-                                                    span.style.color = 'red';
+                                                    connectionSpan.innerText = 'unable to get sensor data characteristic';
+                                                    connectionSpan.style.color = 'red';
                                                 });
  
                                         }).catch(error => {
-                                            span.innerText = 'unable to read sensor configuration characteristic';
-                                            span.style.color = 'red';
+                                            connectionSpan.innerText = 'unable to read sensor configuration characteristic';
+                                            connectionSpan.style.color = 'red';
                                         });
  
-                                    selectsContainer.querySelectorAll('select').forEach(select => {
+                                    sensorSelectsContainer.querySelectorAll('select').forEach(select => {
                                         select.disabled = false;
  
                                         select.addEventListener('input', event => {
@@ -471,33 +470,33 @@
                                 }).catch(error => {
                                     console.error(error);
  
-                                    span.innerText = 'unable to get sensor configuration characteristic';
-                                    span.style.color = 'red';
+                                    connectionSpan.innerText = 'unable to get sensor configuration characteristic';
+                                    connectionSpan.style.color = 'red';
                                 });
  
                         }).catch(error => {
                             console.error(error);
  
-                            span.innerText = 'unable to read sensor information characteristic';
-                            span.style.color = 'red';
+                            connectionSpan.innerText = 'unable to read sensor information characteristic';
+                            connectionSpan.style.color = 'red';
                         });
  
                 }).catch(error => {
-                    span.innerText = 'failed to get sensor information characteristic';
-                    span.style.color = 'red';
+                    connectionSpan.innerText = 'failed to get sensor information characteristic';
+                    connectionSpan.style.color = 'red';
                 });
  
         }).catch(error => {
             console.error(error);
  
-            span.innerText = 'connection failed';
-            span.style.color = 'red';
+            connectionSpan.innerText = 'connection failed';
+            connectionSpan.style.color = 'red';
         });
     });
 
     gestureButton.addEventListener('click', event => {
-        output.innerText = '';
-        output2.innerText = '';
+        gestureOutput.innerText = '';
+        gestureOutput2.innerText = '';
  
         // request bluetooth device
         navigator.bluetooth.requestDevice({
@@ -505,54 +504,54 @@
                 {services : [BOSE_AR_SERVICE_UUID]}
             ]
         }).then(device => {
-            span.innerText = 'got device';
-            span.style.color = 'green';
+            connectionSpan.innerText = 'got device';
+            connectionSpan.style.color = 'green';
  
             // connect to device
             return device.gatt.connect();
         }).then(server => {
-            span.innerText = 'connected to device';
-            span.style.color = 'green';
+            connectionSpan.innerText = 'connected to device';
+            connectionSpan.style.color = 'green';
  
             // get service providing Bose AR-related characteristics
             return server.getPrimaryService(BOSE_AR_SERVICE_UUID);
         }).then(service => {
-            span.innerText = 'connected';
-            span.style.color = 'green';
+            connectionSpan.innerText = 'connected';
+            connectionSpan.style.color = 'green';
  
             // get gesture information characteristic
             service.getCharacteristic(BOSE_AR_GESTURE_INFORMATION_CHARACTERISTIC_UUID)
                 .then(gestureInformationCharacteristic => {
-                    span.innerText = 'got gesture information characteristic';
-                    span.style.color = 'green';
+                    connectionSpan.innerText = 'got gesture information characteristic';
+                    connectionSpan.style.color = 'green';
  
                     // read gesture information characteristic value
                     gestureInformationCharacteristic.readValue()
                         .then(dataView => {
                             const buffer = Array.from(new Uint8Array(dataView.buffer));
  
-                            output.innerText += `gesture information raw byte array: ${JSON.stringify(buffer)}\n\n`;
+                            gestureOutput.innerText += `gesture information raw byte array: ${JSON.stringify(buffer)}\n\n`;
  
                             gestureButton.disabled = true;
  
-                            span.innerText = 'gesture information characteristic read';
-                            span.style.color = 'green';
+                            connectionSpan.innerText = 'gesture information characteristic read';
+                            connectionSpan.style.color = 'green';
  
                             let index = 0;
                             const gestureInformationEntries = [];
  
-                            output.innerText += 'parsing byte array...\n\n'
+                            gestureOutput.innerText += 'parsing byte array...\n\n'
                             while(index + length < dataView.byteLength) {
-                                output.innerText += `parsing new gesture at index: ${index}\n`;
+                                gestureOutput.innerText += `parsing new gesture at index: ${index}\n`;
  
                                 const gestureId = dataView.getUint8(index);
-                                output.innerText += `gesture id (parsed as a Uint8 starting at index ${index}): ${gestureId}\n`;
+                                gestureOutput.innerText += `gesture id (parsed as a Uint8 starting at index ${index}): ${gestureId}\n`;
                                 
                                 const gestureName = gestureNames[gestureId];
-                                output.innerText += `gesture name (indexed by gesture id): "${gestureName}"\n`;
+                                gestureOutput.innerText += `gesture name (indexed by gesture id): "${gestureName}"\n`;
  
                                 const configurationPayloadLength = dataView.getUint16(index+1, true);
-                                output.innerText += `configuration payload length (parsed as little-endian Uint16 starting at index ${index+1}): ${configurationPayloadLength}\n`;
+                                gestureOutput.innerText += `configuration payload length (parsed as little-endian Uint16 starting at index ${index+1}): ${configurationPayloadLength}\n`;
                                 
                                 const gestureInformationEntry = {
                                     gestureId,
@@ -560,7 +559,7 @@
                                     configurationPayloadLength,
                                 };
  
-                                output.innerText += `\n`;
+                                gestureOutput.innerText += `\n`;
                                 gestureInformationEntries.push(gestureInformationEntry);
                                 
                                 index += gestureInformationEntryLength;
@@ -569,20 +568,20 @@
                             // get gesture configuration characteristic
                             service.getCharacteristic(BOSE_AR_GESTURE_CONFIGURATION_CHARACTERISTIC_UUID)
                                 .then(gestureConfigurationCharacteristic => {
-                                    span.innerText = 'got gesture configuration characteristic';
-                                    span.style.color = 'green';
+                                    connectionSpan.innerText = 'got gesture configuration characteristic';
+                                    connectionSpan.style.color = 'green';
     
                                     // set initial state of selects
                                     function updateSelects(dataView) {
                                         const byteArray = Array.from(new Uint8Array(dataView.buffer));
-                                        output.innerText = `gesture configuration raw byte array: ${JSON.stringify(byteArray)}`;
+                                        gestureOutput.innerText = `gesture configuration raw byte array: ${JSON.stringify(byteArray)}`;
     
                                         let index = 0;
                                         while(index < byteArray.length) {
                                             const gestureId = byteArray[index];
                                             const enabled = byteArray[index+1] == 1;
     
-                                            const select = selectsContainer.querySelector(`select[data-gesture-id="${gestureId}"]`);
+                                            const select = gestureSelectsContainer.querySelector(`select[data-gesture-id="${gestureId}"]`);
                                             select.value = enabled? 'enabled':'disabled';
  
                                             const gestureInformationEntry = gestureInformationEntries.find(gestureInformationEntry => gestureInformationEntry.gestureId == gestureId);
@@ -596,8 +595,8 @@
                                         .then(dataView => {
                                             gestureButton.disabled = true;
     
-                                            span.innerText = 'gesture configuration characteristic read';
-                                            span.style.color = 'green';
+                                            connectionSpan.innerText = 'gesture configuration characteristic read';
+                                            connectionSpan.style.color = 'green';
     
                                             updateSelects(dataView);
     
@@ -613,42 +612,42 @@
                                             // get gesture data characteristic
                                             service.getCharacteristic(BOSE_AR_GESTURE_DATA_CHARACTERISTIC_UUID)
                                                 .then(gestureDataCharacteristic => {
-                                                    span.innerText = 'got gesture data characteristic';
-                                                    span.style.color = 'green';
+                                                    connectionSpan.innerText = 'got gesture data characteristic';
+                                                    connectionSpan.style.color = 'green';
  
                                                     gestureDataCharacteristic.startNotifications();
                                                     gestureDataCharacteristic.addEventListener('characteristicvaluechanged', event => {
-                                                        output2.innerText += `\nGesture Detected\n`;
+                                                        gestureOutput2.innerText += `\nGesture Detected\n`;
                                                         
                                                         const dataView = gestureDataCharacteristic.value;
-                                                        output2.innerText += `raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n`;
+                                                        gestureOutput2.innerText += `raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n`;
                                                         
                                                         const gestureId = dataView.getUint8(0);
-                                                        output2.innerText += `gesture id (first Uint8 byte): ${gestureId}\n`;
+                                                        gestureOutput2.innerText += `gesture id (first Uint8 byte): ${gestureId}\n`;
                                                         
                                                         const gestureName = gestureNames[gestureId];
-                                                        output2.innerText += `gesture name: "${gestureName}"\n`;                                                    
+                                                        gestureOutput2.innerText += `gesture name: "${gestureName}"\n`;                                                    
                                                         
                                                         const timestamp = dataView.getUint16(1, false);
-                                                        output2.innerText += `timestamp (big-endian Uint16 from last 2 bytes): ${timestamp} ms\n`;
+                                                        gestureOutput2.innerText += `timestamp (big-endian Uint16 from last 2 bytes): ${timestamp} ms\n`;
                                                     });
  
                                                 }).catch(error => {
                                                     console.error(error);
  
-                                                    span.innerText = 'unable to connect to get gesture data characteristic';
-                                                    span.style.color = 'red';
+                                                    connectionSpan.innerText = 'unable to connect to get gesture data characteristic';
+                                                    connectionSpan.style.color = 'red';
                                                 });
  
                                         }).catch(error => {
                                             console.error(error);
     
-                                            span.innerText = 'unable to connect to gesture configuration characteristic';
-                                            span.style.color = 'red';
+                                            connectionSpan.innerText = 'unable to connect to gesture configuration characteristic';
+                                            connectionSpan.style.color = 'red';
                                         });
                                     
                                     // add eventlisteners to selects to enable/disable gestures
-                                    selectsContainer.querySelectorAll('select').forEach(select => {
+                                    gestureSelectsContainer.querySelectorAll('select').forEach(select => {
                                         select.disabled = false;
     
                                         select.addEventListener('input', event => {
@@ -667,27 +666,27 @@
                                 }).catch(error => {
                                     console.error(error);
     
-                                    span.innerText = 'unable get gesture configuration characteristic';
-                                    span.style.color = 'red';
+                                    connectionSpan.innerText = 'unable get gesture configuration characteristic';
+                                    connectionSpan.style.color = 'red';
                                 });
                         }).catch(error => {
                             console.error(error);
  
-                            span.innerText = 'unable to get gesture information characteristic';
-                            span.style.color = 'red';
+                            connectionSpan.innerText = 'unable to get gesture information characteristic';
+                            connectionSpan.style.color = 'red';
                         });
                 }).catch(error => {
                     console.error(error);
  
-                    span.innerText = 'unable to get gesture information characteristic';
-                    span.style.color = 'red';
+                    connectionSpan.innerText = 'unable to get gesture information characteristic';
+                    connectionSpan.style.color = 'red';
                 });
  
         }).catch(error => {
             console.error(error);
  
-            span.innerText = 'connection failed';
-            span.style.color = 'red';
+            connectionSpan.innerText = 'connection failed';
+            connectionSpan.style.color = 'red';
         });
     });
 </script>
