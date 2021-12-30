@@ -1,0 +1,347 @@
+<button id="gestureDataButton">connect</button>
+<span id="gestureDataSpan"></span>
+<br>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/resonance-audio/build/resonance-audio.min.js"></script>
+</head>
+<body>
+    <div id="gestureDataSelects">
+        <label>
+            Double Tap (129): <select data-gesture-id="129" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+     
+        <label>
+            Head Nod (130): <select data-gesture-id="130" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+     
+        <label>
+            Head Shake (131): <select data-gesture-id="131" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+     
+        <label>
+            Gesture 192 <select data-gesture-id="192" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+     
+        <label>
+            Gesture 193: <select data-gesture-id="193" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+     
+        <label>
+            Gesture 194 <select data-gesture-id="194" disabled="">
+                <option selected="">disabled</option>
+                <option>enabled</option>
+            </select>
+        </label>
+        <br>
+    </div>
+    <br>
+    <div id="gestureDataOutput"></div>
+    <div id="gestureDataOutput2"></div>    
+    <br>
+    <br>
+    <button id="playButton">Play sound</button>
+</body>
+
+<script>
+    // Create an AudioContext
+    let audioContext = new AudioContext();
+
+    // Create a (first-order Ambisonic) Resonance Audio scene and pass it
+    // the AudioContext.
+    let resonanceAudioScene = new ResonanceAudio(audioContext);
+
+    // Connect the scene’s binaural output to stereo out.
+    resonanceAudioScene.output.connect(audioContext.destination);
+
+    // Define room dimensions.
+    // By default, room dimensions are undefined (0m x 0m x 0m).
+    let roomDimensions = {
+        width: 3.1,
+        height: 2.5,
+        depth: 3.4,
+    };
+
+    // Define materials for each of the room’s six surfaces.
+    // Room materials have different acoustic reflectivity.
+    let roomMaterials = {
+        // Room wall materials
+        left: 'brick-bare',
+        right: 'curtain-heavy',
+        front: 'marble',
+        back: 'glass-thin',
+        // Room floor
+        down: 'grass',
+        // Room ceiling
+        up: 'transparent',
+    };
+
+    // Add the room definition to the scene.
+    resonanceAudioScene.setRoomProperties(roomDimensions, roomMaterials);
+
+    // Create an AudioElement.
+    let audioElement = document.createElement('audio');
+
+    // Load an audio file into the AudioElement.
+    audioElement.src = 'resources/my_mule.wav';
+
+    // Generate a MediaElementSource from the AudioElement.
+    let audioElementSource = audioContext.createMediaElementSource(audioElement);
+
+    // Add the MediaElementSource to the scene as an audio input source.
+    let source = resonanceAudioScene.createSource();
+    audioElementSource.connect(source.input);
+
+    // Set the source position relative to the room center (source default position).
+    source.setPosition(-0.707, -0.707, 0);
+
+    playButton = document.getElementById('playButton');
+    playButton.addEventListener('click', event => {
+        audioElement.play();
+        audioContext.resume().then(() => {
+            console.log('Playback resumed successfully');
+        });
+        console.log(audioContext.state);
+    });
+</script>
+
+<script type="module">
+    const BOSE_AR_SERVICE_UUID = "0000fdd2-0000-1000-8000-00805f9b34fb";
+    const BOSE_AR_GESTURE_INFORMATION_CHARACTERISTIC_UUID = "a0384f52-f95a-4bcd-b898-7b9ceec92dad";
+    const BOSE_AR_GESTURE_CONFIGURATION_CHARACTERISTIC_UUID = "21e550af-f780-477b-9334-1f983296f1d7";
+    const BOSE_AR_GESTURE_DATA_CHARACTERISTIC_UUID = "9014dd4e-79ba-4802-a275-894d3b85ac74";
+ 
+    const button = document.getElementById('gestureDataButton');
+    const span = document.getElementById('gestureDataSpan');
+    const selectsContainer = document.getElementById('gestureDataSelects');
+ 
+    const output = document.getElementById('gestureDataOutput');
+    const output2 = document.getElementById('gestureDataOutput2');
+ 
+    const gestureInformationEntryLength = 3;
+ 
+    const gestureNames = {
+        129 : 'double tap',
+        130 : 'head nod',
+        131 : 'head shake',
+ 
+        192 : 'unknown gesture 192',
+        193 : 'unknown gesture 193',
+        194 : 'unknown gesture 194',
+    };
+    
+    button.addEventListener('click', event => {
+        output.innerText = '';
+        output2.innerText = '';
+ 
+        // request bluetooth device
+        navigator.bluetooth.requestDevice({
+            filters : [
+                {services : [BOSE_AR_SERVICE_UUID]}
+            ]
+        }).then(device => {
+            span.innerText = 'got device';
+            span.style.color = 'green';
+ 
+            // connect to device
+            return device.gatt.connect();
+        }).then(server => {
+            span.innerText = 'connected to device';
+            span.style.color = 'green';
+ 
+            // get service providing Bose AR-related characteristics
+            return server.getPrimaryService(BOSE_AR_SERVICE_UUID);
+        }).then(service => {
+            span.innerText = 'connected';
+            span.style.color = 'green';
+ 
+            // get gesture information characteristic
+            service.getCharacteristic(BOSE_AR_GESTURE_INFORMATION_CHARACTERISTIC_UUID)
+                .then(gestureInformationCharacteristic => {
+                    span.innerText = 'got gesture information characteristic';
+                    span.style.color = 'green';
+ 
+                    // read gesture information characteristic value
+                    gestureInformationCharacteristic.readValue()
+                        .then(dataView => {
+                            const buffer = Array.from(new Uint8Array(dataView.buffer));
+ 
+                            output.innerText += `gesture information raw byte array: ${JSON.stringify(buffer)}\n\n`;
+ 
+                            button.disabled = true;
+ 
+                            span.innerText = 'gesture information characteristic read';
+                            span.style.color = 'green';
+ 
+                            let index = 0;
+                            const gestureInformationEntries = [];
+ 
+                            output.innerText += 'parsing byte array...\n\n'
+                            while(index + length < dataView.byteLength) {
+                                output.innerText += `parsing new gesture at index: ${index}\n`;
+ 
+                                const gestureId = dataView.getUint8(index);
+                                output.innerText += `gesture id (parsed as a Uint8 starting at index ${index}): ${gestureId}\n`;
+                                
+                                const gestureName = gestureNames[gestureId];
+                                output.innerText += `gesture name (indexed by gesture id): "${gestureName}"\n`;
+ 
+                                const configurationPayloadLength = dataView.getUint16(index+1, true);
+                                output.innerText += `configuration payload length (parsed as little-endian Uint16 starting at index ${index+1}): ${configurationPayloadLength}\n`;
+                                
+                                const gestureInformationEntry = {
+                                    gestureId,
+                                    gestureName,
+                                    configurationPayloadLength,
+                                };
+ 
+                                output.innerText += `\n`;
+                                gestureInformationEntries.push(gestureInformationEntry);
+                                
+                                index += gestureInformationEntryLength;
+                            }
+ 
+                            // get gesture configuration characteristic
+                            service.getCharacteristic(BOSE_AR_GESTURE_CONFIGURATION_CHARACTERISTIC_UUID)
+                                .then(gestureConfigurationCharacteristic => {
+                                    span.innerText = 'got gesture configuration characteristic';
+                                    span.style.color = 'green';
+    
+                                    // set initial state of selects
+                                    function updateSelects(dataView) {
+                                        const byteArray = Array.from(new Uint8Array(dataView.buffer));
+                                        output.innerText = `gesture configuration raw byte array: ${JSON.stringify(byteArray)}`;
+    
+                                        let index = 0;
+                                        while(index < byteArray.length) {
+                                            const gestureId = byteArray[index];
+                                            const enabled = byteArray[index+1] == 1;
+    
+                                            const select = selectsContainer.querySelector(`select[data-gesture-id="${gestureId}"]`);
+                                            select.value = enabled? 'enabled':'disabled';
+ 
+                                            const gestureInformationEntry = gestureInformationEntries.find(gestureInformationEntry => gestureInformationEntry.gestureId == gestureId);
+    
+                                            index += 1 + gestureInformationEntry;
+                                        }
+                                    }
+    
+                                    // read gesture configuration characteristic value
+                                    gestureConfigurationCharacteristic.readValue()
+                                        .then(dataView => {
+                                            button.disabled = true;
+    
+                                            span.innerText = 'gesture configuration characteristic read';
+                                            span.style.color = 'green';
+    
+                                            updateSelects(dataView);
+    
+                                            // listen for gesture configuration characteristic updates
+                                            gestureConfigurationCharacteristic.startNotifications();
+                                            gestureConfigurationCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                                                const dataView = gestureConfigurationCharacteristic.value;
+                                                updateSelects(dataView);
+                                            });
+ 
+                                            // NEW CODE
+ 
+                                            // get gesture data characteristic
+                                            service.getCharacteristic(BOSE_AR_GESTURE_DATA_CHARACTERISTIC_UUID)
+                                                .then(gestureDataCharacteristic => {
+                                                    span.innerText = 'got gesture data characteristic';
+                                                    span.style.color = 'green';
+ 
+                                                    gestureDataCharacteristic.startNotifications();
+                                                    gestureDataCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                                                        output2.innerText += `\nGesture Detected\n`;
+                                                        
+                                                        const dataView = gestureDataCharacteristic.value;
+                                                        output2.innerText += `raw byte array: ${JSON.stringify(Array.from(new Uint8Array(dataView.buffer)))}\n`;
+                                                        
+                                                        const gestureId = dataView.getUint8(0);
+                                                        output2.innerText += `gesture id (first Uint8 byte): ${gestureId}\n`;
+                                                        
+                                                        const gestureName = gestureNames[gestureId];
+                                                        output2.innerText += `gesture name: "${gestureName}"\n`;                                                    
+                                                        
+                                                        const timestamp = dataView.getUint16(1, false);
+                                                        output2.innerText += `timestamp (big-endian Uint16 from last 2 bytes): ${timestamp} ms\n`;
+                                                    });
+ 
+                                                }).catch(error => {
+                                                    console.error(error);
+ 
+                                                    span.innerText = 'unable to connect to get gesture data characteristic';
+                                                    span.style.color = 'red';
+                                                });
+ 
+                                        }).catch(error => {
+                                            console.error(error);
+    
+                                            span.innerText = 'unable to connect to gesture configuration characteristic';
+                                            span.style.color = 'red';
+                                        });
+                                    
+                                    // add eventlisteners to selects to enable/disable gestures
+                                    selectsContainer.querySelectorAll('select').forEach(select => {
+                                        select.disabled = false;
+    
+                                        select.addEventListener('input', event => {
+                                            const gestureId = Number(select.dataset.gestureId);
+                                            const enabled = event.target.value == 'enabled';
+                                            
+                                            const dataView = gestureConfigurationCharacteristic.value;
+                                            let byteArray = Array.from(new Uint8Array(dataView.buffer));
+                                            byteArray[byteArray.indexOf(gestureId)+1] = enabled? 1:0;
+    
+                                            byteArray = new Uint8Array(byteArray);
+                                            gestureConfigurationCharacteristic.writeValue(byteArray);
+                                        });
+                                    });
+    
+                                }).catch(error => {
+                                    console.error(error);
+    
+                                    span.innerText = 'unable get gesture configuration characteristic';
+                                    span.style.color = 'red';
+                                });
+                        }).catch(error => {
+                            console.error(error);
+ 
+                            span.innerText = 'unable to get gesture information characteristic';
+                            span.style.color = 'red';
+                        });
+                }).catch(error => {
+                    console.error(error);
+ 
+                    span.innerText = 'unable to get gesture information characteristic';
+                    span.style.color = 'red';
+                });
+ 
+        }).catch(error => {
+            console.error(error);
+ 
+            span.innerText = 'connection failed';
+            span.style.color = 'red';
+        });
+    });
+</script>
